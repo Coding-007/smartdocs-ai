@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.pyc
+venv/
+.DS_Store
+embeddings/test_vectors.json
+retrieval/test_question_vector.json
