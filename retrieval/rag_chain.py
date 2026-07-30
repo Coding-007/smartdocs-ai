@@ -24,9 +24,9 @@ def ask(question: str) -> dict:
     print(f"\nQuestion: {question}")
 
     # Step 1: Embed the question
-    #question_vector = embed_question(question)
-    with open("retrieval/test_question_vector.json", "r") as f:
-        question_vector = json.load(f)
+    question_vector = embed_question(question)
+    #with open("retrieval/test_question_vector.json", "r") as f:
+        #question_vector = json.load(f)
 
     # Step 2: Search Pinecone for similar chunks
     index = init_pinecone()

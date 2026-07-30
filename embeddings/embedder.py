@@ -16,7 +16,7 @@ def get_embeddings(chunks: list) -> list:
     # Extract just the text from each chunk
     texts = [chunk.page_content for chunk in chunks]
 
-    # open-ai api and create vectors
+    # # #open-ai api and create vectors
     # response = client.embeddings.create(
     #     input = texts,
     #     model = "text-embedding-3-small"
@@ -25,7 +25,7 @@ def get_embeddings(chunks: list) -> list:
     # vectors = []
     # for i, embedding in enumerate(response.data):
     #     vectors.append({
-    #         'id': str(i),
+    #         'id': f"{chunks[i].metadata.get('source', 'doc').replace('/', '_')}_{i}",
     #         'values': embedding.embedding,
     #         'metadata': {
     #             'text': texts[i],
@@ -33,8 +33,12 @@ def get_embeddings(chunks: list) -> list:
     #             'chunk_id': chunks[i].metadata.get('chunk_id', i),
     #         }
     #     })
+    #
+    # # #Save to JSON file
+    # with open("embeddings/test2_vectors.json", "w") as f:
+    #     json.dump(vectors, f)
 
-    with open("embeddings/test_vectors.json", "r") as file:
+    with open("embeddings/test2_vectors.json", "r") as file:
         vectors = json.load(file)
 
     return vectors

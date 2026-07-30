@@ -10,6 +10,8 @@ def load_documents(docs_path: str) -> list:
         filepath = os.path.join(docs_path, filename)
 
         if filename.endswith(".pdf"):
+            if filename == 'qna.pdf':
+                continue
             loader = PyPDFLoader(filepath)
             all_docs.extend(loader.load())
         elif filename.endswith(".txt"):
@@ -24,7 +26,7 @@ def load_documents(docs_path: str) -> list:
         for i, chunk in enumerate(chunks):
             chunk.metadata["chunk_id"] = i
 
-        #print(f"Loaded {len(all_docs)} pages → split into {len(chunks)} chunks")
-
     return chunks
+
+# --- Execution ---
 #load_documents('docs')
