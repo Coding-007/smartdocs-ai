@@ -7,6 +7,7 @@ from http.client import responses
 from openai import OpenAI
 from dotenv import load_dotenv
 from vectordb.pinecone_store import init_pinecone, query_pinecone
+from reranker.reranker import rerank
 
 load_dotenv()
 
@@ -32,7 +33,10 @@ def ask(question: str) -> dict:
     index = init_pinecone()
     matches = query_pinecone(index, question_vector, top_k=3)
 
-    # Step 3: Build context from matched chunks
+    # Step 3: Rerank → keep best 3
+    best_matches = rerank(question, matches, top_n=3)
+
+    # Step 4: Build context from matched chunks
     context = ""
     sources = []
     for match in matches:
