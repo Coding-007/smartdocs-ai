@@ -2,8 +2,9 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from retrieval.rag_chain import ask
+from retrieval.rag_chain import ask, ask_stream
 
 # Create the FastAPI app
 app = FastAPI(
@@ -29,3 +30,10 @@ def ask_question(request: QuestionRequest):
         "answer": result["answer"],
         "sources": result["sources"]
     }
+
+@app.post("/ask-stream")
+def ask_stream_endpoint(request: QuestionRequest):
+    return StreamingResponse(
+        ask_stream(request.question),
+        media_type="text/plain",
+    )
