@@ -3,6 +3,7 @@ warnings.filterwarnings("ignore")
 
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from retrieval.rag_chain import ask, ask_stream
 
@@ -11,6 +12,14 @@ app = FastAPI(
     title="SmartDocs AI",
     description="Ask questions from your documents",
     version="1.0"
+)
+
+# Allow all origins during development
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 class QuestionRequest(BaseModel):

@@ -2,7 +2,6 @@ import os
 import json
 import warnings
 warnings.filterwarnings("ignore")
-#from http.client import responses
 
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -90,4 +89,3 @@ def ask_stream(question: str):
         delta = chunk.choices[0].delta.content
         if delta is not None:
             yield delta
-            time.sleep(0.01)
