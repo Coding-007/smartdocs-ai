@@ -1,7 +1,8 @@
+import os
 import warnings
 warnings.filterwarnings("ignore")
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -22,6 +23,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def verify_api_key(x_api_key: str = Header(...)):
+    valid_key = os.getenv("SMARTDOCS_API_KEY")
+    if x_api_key != valid_key:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid API Key",
+        )
+    return x_api_key
+
 class QuestionRequest(BaseModel):
     question: str
 
@@ -31,7 +41,7 @@ def health():
     return {"status": "SmartDocs AI is running"}
 
 # Route 2: Ask a question
-@app.post("/ask")
+@app.post("/ask", dependencies=[Depends(verify_api_key)])
 def ask_question(request: QuestionRequest):
     result = ask(request.question)
     return {
@@ -40,7 +50,7 @@ def ask_question(request: QuestionRequest):
         "sources": result["sources"]
     }
 
-@app.post("/ask-stream")
+@app.post("/ask-stream", dependencies=[Depends(verify_api_key)])
 def ask_stream_endpoint(request: QuestionRequest):
     return StreamingResponse(
         ask_stream(request.question),
