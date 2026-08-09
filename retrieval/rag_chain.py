@@ -1,7 +1,9 @@
 import os
+import time
 import json
 import warnings
 warnings.filterwarnings("ignore")
+from ops.logger import log_query
 
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -73,6 +75,7 @@ def get_context(question: str, history: list = None):
 def ask(question: str, session_id: str = 'default') -> dict:
     print(f"\nQuestion: {question}")
 
+    start_time = time.time()
     history = get_history(session_id)
 
     # Get this session's history
@@ -103,10 +106,22 @@ def ask(question: str, session_id: str = 'default') -> dict:
     )
 
     answer = response.choices[0].message.content
+    latency_ms = (time.time() - start_time) * 1000
 
     # Save this turn to memory
     add_to_history(session_id, "user", question)
     add_to_history(session_id, "assistant", answer)
+
+    # Log this query
+    log_query(
+        question=question,
+        answer=answer,
+        sources=sources,
+        session_id=session_id,
+        latency_ms=latency_ms,
+        prompt_tokens=response.usage.prompt_tokens,
+        completion_tokens=response.usage.completion_tokens
+    )
 
     return {
         "question": question,
@@ -118,6 +133,7 @@ def ask(question: str, session_id: str = 'default') -> dict:
 def ask_stream(question: str, session_id: str = "default"):
     print(f"\nQuestion: {question}")
 
+    start_time = time.time()
     history = get_history(session_id)
 
     context, sources = get_context(question, history)
@@ -138,17 +154,37 @@ def ask_stream(question: str, session_id: str = "default"):
     stream = client.chat.completions.create(
         model="gpt-4o",
         stream=True,
+        stream_options={"include_usage": True},
         messages=messages
     )
 
     # Yield each word chunk as it arrives
     full_answer = ""
+    usage = None
+
     for chunk in stream:
         if chunk.choices and chunk.choices[0].delta.content:
             delta = chunk.choices[0].delta.content
             full_answer += delta
             yield delta
 
+        # Last chunk contains usage info when stream_options is set
+        if chunk.usage:
+            usage = chunk.usage
+
+    latency_ms = (time.time() - start_time) * 1000
+
     # Save to memory after streaming completes
     add_to_history(session_id, "user", question)
     add_to_history(session_id, "assistant", full_answer)
+
+    # Log this streaming query too
+    log_query(
+        question=question,
+        answer=full_answer,
+        sources=sources,
+        session_id=session_id,
+        latency_ms=latency_ms,
+        prompt_tokens=usage.prompt_tokens if usage else 0,
+        completion_tokens=usage.completion_tokens if usage else 0
+    )

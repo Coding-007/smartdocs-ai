@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from retrieval.rag_chain import ask, ask_stream
 from memory.memory import get_history, clear_history
+from ops.logger import get_stats
 
 load_dotenv()
 
@@ -65,3 +66,7 @@ def get_session_history(session_id: str):
 def clear_session_history(session_id: str):
     clear_history(session_id)
     return {"message": f"Session {session_id} cleared"}
+
+@app.get("/stats", dependencies=[Depends(verify_api_key)])
+def stats():
+    return get_stats()
