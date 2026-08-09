@@ -7,6 +7,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from vectordb.pinecone_store import init_pinecone, query_pinecone
 from reranker.reranker import rerank
+from memory.memory import get_history, add_to_history
 
 load_dotenv()
 
@@ -20,16 +21,45 @@ def embed_question(question: str) -> list:
     )
     return response.data[0].embedding
 
-def get_context(question: str):
+def rewrite_question(question: str, history: list) -> str:
+    # If no history, nothing to rewrite
+    if not history:
+        return question
+
+    recent = history[-4:]  # last 2 turns
+    history_text = "\n".join([f"{m['role']}: {m['content']}" for m in recent])
+
+    rewrite_prompt = f"""Given this conversation history:
+        {history_text}
+        
+        Rewrite this follow-up question into a standalone question that makes sense without the history.
+        Only output the rewritten question, nothing else.
+        
+        Follow-up question: {question}
+        Standalone question:"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",  # cheaper model for this simple task
+        messages=[{"role": "user", "content": rewrite_prompt}]
+    )
+
+    rewritten = response.choices[0].message.content.strip()
+    print(f"Rewritten: '{question}' → '{rewritten}'")
+    return rewritten
+
+def get_context(question: str, history: list = None):
+    # Rewrite vague follow-ups into standalone questions
+    search_question = rewrite_question(question, history or [])
+
     # Step 1: Load question vector
-    question_vector = embed_question(question)
+    question_vector = embed_question(search_question)
 
     # Step 2: Get top 10 from Pinecone
     index = init_pinecone()
     matches = query_pinecone(index, question_vector, top_k=10)
 
     # Step 3: Rerank → keep best 3
-    best_matches = rerank(question, matches, top_n=3)
+    best_matches = rerank(search_question, matches, top_n=3)
 
     # Step 4: Build context
     context = ""
@@ -40,9 +70,15 @@ def get_context(question: str):
 
     return context, list(set(sources))
 
-def ask(question: str) -> dict:
+def ask(question: str, session_id: str = 'default') -> dict:
     print(f"\nQuestion: {question}")
-    context, sources = get_context(question)
+
+    history = get_history(session_id)
+
+    # Get this session's history
+    history = get_history(session_id)
+
+    context, sources = get_context(question, history)
 
     system_prompt = """You are SmartDocs AI.
         Answer ONLY using the context provided below.
@@ -50,23 +86,41 @@ def ask(question: str) -> dict:
         'I could not find that in the documents.'
         Always mention the source at the end."""
 
+    # Build messages — history + current question
+    messages = [
+        {"role": "system", "content": system_prompt + f"\n\nContext:\n{context}"}
+    ]
+
+    # Add previous conversation turns
+    messages.extend(history)
+
+    # Add current question
+    messages.append({"role": "user", "content": question})
+
     response = client.chat.completions.create(
         model="gpt-4o",
-        messages=[
-            {'role': 'system', 'content': system_prompt},
-            {"role": "user",   "content": f"Context:\n{context}\n\nQuestion: {question}"}
-        ]
+        messages=messages
     )
+
+    answer = response.choices[0].message.content
+
+    # Save this turn to memory
+    add_to_history(session_id, "user", question)
+    add_to_history(session_id, "assistant", answer)
 
     return {
         "question": question,
-        "answer": response.choices[0].message.content,
-        "sources": sources
+        "answer": answer,
+        "sources": sources,
+        "session_id": session_id
     }
 
-def ask_stream(question: str):
-    # Same pipeline but streams words as they arrive
-    context, sources = get_context(question)
+def ask_stream(question: str, session_id: str = "default"):
+    print(f"\nQuestion: {question}")
+
+    history = get_history(session_id)
+
+    context, sources = get_context(question, history)
 
     system_prompt = """You are SmartDocs AI.
     Answer ONLY using the context provided below.
@@ -74,18 +128,27 @@ def ask_stream(question: str):
     'I could not find that in the documents.'
     Always mention the source at the end."""
 
+    messages = [
+        {"role": "system", "content": system_prompt + f"\n\nContext:\n{context}"}
+    ]
+    messages.extend(history)
+    messages.append({"role": "user", "content": question})
+
     # stream=True tells OpenAI to send words one by one
     stream = client.chat.completions.create(
         model="gpt-4o",
         stream=True,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {question}"}
-        ]
+        messages=messages
     )
 
     # Yield each word chunk as it arrives
+    full_answer = ""
     for chunk in stream:
-        delta = chunk.choices[0].delta.content
-        if delta is not None:
+        if chunk.choices and chunk.choices[0].delta.content:
+            delta = chunk.choices[0].delta.content
+            full_answer += delta
             yield delta
+
+    # Save to memory after streaming completes
+    add_to_history(session_id, "user", question)
+    add_to_history(session_id, "assistant", full_answer)

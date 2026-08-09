@@ -6,13 +6,17 @@ from fastapi import FastAPI, Header, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from dotenv import load_dotenv
 from retrieval.rag_chain import ask, ask_stream
+from memory.memory import get_history, clear_history
+
+load_dotenv()
 
 # Create the FastAPI app
 app = FastAPI(
     title="SmartDocs AI",
     description="Ask questions from your documents",
-    version="1.0"
+    version="2.0"
 )
 
 # Allow all origins during development
@@ -34,25 +38,30 @@ def verify_api_key(x_api_key: str = Header(...)):
 
 class QuestionRequest(BaseModel):
     question: str
+    session_id: str = "default"
 
-# Route 1: Health check
 @app.get("/health")
 def health():
     return {"status": "SmartDocs AI is running"}
 
-# Route 2: Ask a question
 @app.post("/ask", dependencies=[Depends(verify_api_key)])
 def ask_question(request: QuestionRequest):
-    result = ask(request.question)
-    return {
-        "question": result["question"],
-        "answer": result["answer"],
-        "sources": result["sources"]
-    }
+    result = ask(request.question, request.session_id)
+    return result
 
 @app.post("/ask-stream", dependencies=[Depends(verify_api_key)])
 def ask_stream_endpoint(request: QuestionRequest):
     return StreamingResponse(
-        ask_stream(request.question),
-        media_type="text/plain",
+        ask_stream(request.question, request.session_id),
+        media_type="text/plain"
     )
+
+@app.get("/history/{session_id}", dependencies=[Depends(verify_api_key)])
+def get_session_history(session_id: str):
+    history = get_history(session_id)
+    return {"session_id": session_id, "messages": history}
+
+@app.delete("/history/{session_id}", dependencies=[Depends(verify_api_key)])
+def clear_session_history(session_id: str):
+    clear_history(session_id)
+    return {"message": f"Session {session_id} cleared"}
