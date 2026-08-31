@@ -10,7 +10,7 @@ def load_documents(docs_path: str) -> list:
         filepath = os.path.join(docs_path, filename)
 
         if filename.endswith(".pdf"):
-            if filename == 'qna.pdf':
+            if filename != 'discovery.pdf':
                 continue
             loader = PyPDFLoader(filepath)
             all_docs.extend(loader.load())

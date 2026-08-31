@@ -251,7 +251,10 @@
             try {
               const response = await fetch(`${CONFIG.API_URL}/ask-stream`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': CONFIG.API_KEY
+                  },
                 body: JSON.stringify({ question: question })
               });
 

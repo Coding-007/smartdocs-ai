@@ -17,29 +17,29 @@ def get_embeddings(chunks: list) -> list:
     texts = [chunk.page_content for chunk in chunks]
 
     # # #open-ai api and create vectors
-    # response = client.embeddings.create(
-    #     input = texts,
-    #     model = "text-embedding-3-small"
-    # )
-    #
-    # vectors = []
-    # for i, embedding in enumerate(response.data):
-    #     vectors.append({
-    #         'id': f"{chunks[i].metadata.get('source', 'doc').replace('/', '_')}_{i}",
-    #         'values': embedding.embedding,
-    #         'metadata': {
-    #             'text': texts[i],
-    #             'source': chunks[i].metadata.get('source', 'unknown'),
-    #             'chunk_id': chunks[i].metadata.get('chunk_id', i),
-    #         }
-    #     })
+    response = client.embeddings.create(
+        input = texts,
+        model = "text-embedding-3-small"
+    )
+
+    vectors = []
+    for i, embedding in enumerate(response.data):
+        vectors.append({
+            'id': f"{chunks[i].metadata.get('source', 'doc').replace('/', '_')}_{i}",
+            'values': embedding.embedding,
+            'metadata': {
+                'text': texts[i],
+                'source': chunks[i].metadata.get('source', 'unknown'),
+                'chunk_id': chunks[i].metadata.get('chunk_id', i),
+            }
+        })
     #
     # # #Save to JSON file
-    # with open("embeddings/test2_vectors.json", "w") as f:
-    #     json.dump(vectors, f)
+    with open("embeddings/test3_vectors.json", "w") as f:
+        json.dump(vectors, f)
 
-    with open("embeddings/test2_vectors.json", "r") as file:
-        vectors = json.load(file)
+    # with open("embeddings/test2_vectors.json", "r") as file:
+    #     vectors = json.load(file)
 
     return vectors
 
