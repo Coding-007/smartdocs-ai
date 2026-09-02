@@ -9,20 +9,25 @@ from agent.tools import TOOLS, execute_tool
 
 load_dotenv()
 
-client = OpenAI(os.getenv("OPENAI_API_KEY"))
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def run_agent(question: str, max_loops: int = 5):
+def run_agent(question: str, max_loops: int = 5) -> dict:
     print(f"\n🤖 Agent received: {question}")
 
-    system_prompt = """You are SmartDocs Agent, a helpful AI assistant.
-    You have access to tools. Use search_documents when the question
-    might be answered by the uploaded document library.
-    If a tool returns 'No relevant information found', tell the user honestly.
-    Always cite sources when you used search_documents."""
+    system_prompt = """
+        You are SmartDocs Agent, an AI assistant that answers questions using an uploaded document library.
+    
+        IMPORTANT RULES:
+        1. For ANY factual question, you MUST call search_documents FIRST before answering — even if you think you already know the answer.
+            The user wants answers grounded in THEIR documents, not your general knowledge.
+        2. Only skip the tool for greetings, small talk, or questions about yourself (like "how are you").
+        3. Always cite sources when you used search_documents.
+        4. If search_documents finds nothing relevant, tell the user honestly rather than using your own knowledge.
+    """
 
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user", "content": question}
+        {"role": "user",   "content": question}
     ]
 
     tools_used = []
@@ -35,7 +40,7 @@ def run_agent(question: str, max_loops: int = 5):
             tools=TOOLS
         )
 
-        message = response.choice[0].message
+        message = response.choices[0].message
 
         # Case 1: GPT wants to call a tool
         if message.tool_calls:
@@ -54,9 +59,9 @@ def run_agent(question: str, max_loops: int = 5):
 
                 # Feed the result back to GPT
                 messages.append({
-                    "role": "tool",
+                    "role":         "tool",
                     "tool_call_id": tool_call.id,
-                    "content": result
+                    "content":      result
                 })
 
             # Loop back — GPT sees the tool result and decides next step
@@ -66,13 +71,13 @@ def run_agent(question: str, max_loops: int = 5):
         else:
             print(f"  ✅ Final answer after {loop_count + 1} loop(s)")
             return {
-                "question": question,
-                "answer": message.content,
+                "question":   question,
+                "answer":     message.content,
                 "tools_used": tools_used
             }
 
     return {
-        "question": question,
-        "answer": "I couldn't complete this request in time.",
+        "question":   question,
+        "answer":     "I couldn't complete this request in time.",
         "tools_used": tools_used
     }
