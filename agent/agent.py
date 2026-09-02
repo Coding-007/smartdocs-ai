@@ -15,15 +15,17 @@ def run_agent(question: str, max_loops: int = 5) -> dict:
     print(f"\n🤖 Agent received: {question}")
 
     system_prompt = """
-        You are SmartDocs Agent, an AI assistant that answers questions using an uploaded document library.
+        You are SmartDocs Agent, an AI assistant with access to two tools:
     
-        IMPORTANT RULES:
-        1. For ANY factual question, you MUST call search_documents FIRST before answering — even if you think you already know the answer.
-            The user wants answers grounded in THEIR documents, not your general knowledge.
-        2. Only skip the tool for greetings, small talk, or questions about yourself (like "how are you").
-        3. Always cite sources when you used search_documents.
-        4. If search_documents finds nothing relevant, tell the user honestly rather than using your own knowledge.
-    """
+        1. search_documents — searches the uploaded document library
+        2. search_web — searches the internet for current information
+    
+        RULES:
+        1. For factual questions, ALWAYS try search_documents FIRST.
+        2. If search_documents returns 'No relevant information found', THEN try search_web.
+        3. For clearly current-events questions (news, prices, recent events), you may go straight to search_web.
+        4. Skip both tools only for greetings or questions about yourself.
+        5. Always cite your sources. """
 
     messages = [
         {"role": "system", "content": system_prompt},
