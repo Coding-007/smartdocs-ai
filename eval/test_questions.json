@@ -1,0 +1,22 @@
+[
+  {
+    "question": "What is the tallest mountain in the world?",
+    "ground_truth": "Mount Everest is the highest mountain above sea level."
+  },
+  {
+    "question": "Which country is famous for the Eiffel Tower?",
+    "ground_truth": "France is home to the Eiffel Tower."
+  },
+  {
+    "question": "What is the largest planet in our solar system?",
+    "ground_truth": "Jupiter is the largest planet in our solar system."
+  },
+  {
+    "question": "What is the freezing point of water?",
+    "ground_truth": "Water freezes at 0°C or 32°F under normal atmospheric pressure."
+  },
+  {
+    "question": "Which gas is most abundant in Earth's atmosphere?",
+    "ground_truth": "Nitrogen makes up about 78% of Earth's atmosphere."
+  }
+]

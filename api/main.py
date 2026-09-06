@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from retrieval.rag_chain import ask, ask_stream
 from memory.memory import get_history, clear_history
 from ops.logger import get_stats
+from agent.agent import run_agent
 
 load_dotenv()
 
@@ -56,6 +57,15 @@ def ask_stream_endpoint(request: QuestionRequest):
         ask_stream(request.question, request.session_id),
         media_type="text/plain"
     )
+
+@app.post("/agent-ask", dependencies=[Depends(verify_api_key)])
+def agent_ask_question(request: QuestionRequest):
+    result = run_agent(request.question)
+    return {
+        "question":   result["question"],
+        "answer":     result["answer"],
+        "tools_used": result["tools_used"]
+    }
 
 @app.get("/history/{session_id}", dependencies=[Depends(verify_api_key)])
 def get_session_history(session_id: str):
