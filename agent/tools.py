@@ -1,4 +1,5 @@
 import os
+import numexpr
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -47,6 +48,23 @@ TOOLS = [
                 "required": ["query"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "calculate",
+            "description": "Evaluate a mathematical expression. Use this for any arithmetic, percentages, unit conversions, or calculations — especially when combining a number found in documents with math (e.g. converting units, computing totals, percentages).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "expression": {
+                        "type": "string",
+                        "description": "A mathematical expression to evaluate, e.g. '2847.63 * 0.15' or '(100 - 32) * 5/9'"
+                    }
+                },
+                "required": ["expression"]
+            }
+        }
     }
 ]
 
@@ -77,6 +95,13 @@ def search_web(query: str) -> str:
     except Exception as e:
         return f"Web search failed: {str(e)}"
 
+def calculate(expression: str) -> str:
+    try:
+        result = numexpr.evaluate(expression).item()
+        return f"Result: {result}"
+    except Exception as e:
+        return f"Could not calculate '{expression}': {str(e)}"
+
 # -----------------------------------------------
 # Router — maps tool name to function
 # -----------------------------------------------
@@ -85,5 +110,7 @@ def execute_tool(tool_name: str, arguments: dict) -> str:
         return search_documents(arguments["query"])
     elif tool_name == "search_web":
         return search_web(arguments["query"])
+    elif tool_name == "calculate":
+        return calculate(arguments["expression"])
 
     return f"Unknown tool: {tool_name}"
